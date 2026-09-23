@@ -9,41 +9,7 @@ const FILTER_OPTIONS = {
   occasion: ['work', 'casual', 'party', 'lounge', 'formal', 'workout']
 };
 
-const INITIAL_WARDROBE = [
-  {
-    id: 101,
-    layer: 'coats',
-    name: 'Trench Coat',
-    occasion: ['work', 'casual'],
-    colors: ['beige'],
-    temperature: ['cold', 'medium'],
-    weather: ['rain', 'cloudy'],
-    hiddenTags: ['double breasted', 'water resistant', 'classic fit'],
-    image: 'https://placehold.co/180x180/e0d5c1/333?text=Trench+Coat'
-  },
-  {
-    id: 102,
-    layer: 'tops',
-    name: 'White Silk Blouse',
-    occasion: ['work', 'casual', 'formal'],
-    colors: ['white'],
-    temperature: ['medium', 'hot'],
-    weather: ['sun', 'cloudy'],
-    hiddenTags: ['relaxed fit', 'breathable silk', 'collared'],
-    image: 'https://placehold.co/180x180/fcfcfc/333?text=Silk+Blouse'
-  },
-  {
-    id: 103,
-    layer: 'bottoms',
-    name: 'Navy Trousers',
-    occasion: ['work', 'formal'],
-    colors: ['navy'],
-    temperature: ['cold', 'medium', 'hot'],
-    weather: ['sun', 'cloudy', 'rain'],
-    hiddenTags: ['tailored fit', 'high waist', 'pleated'],
-    image: 'https://placehold.co/180x180/1c2841/fff?text=Navy+Trousers'
-  }
-];
+const INITIAL_WARDROBE = [];
 
 const LAYERS = ['coats', 'tops', 'bottoms', 'shoes', 'bags'];
 const LAYER_LABELS = { coats: 'Coats', tops: 'Tops', bottoms: 'Bottoms', shoes: 'Shoes', bags: 'Bags', 'try-on': 'Virtual Try-On' };
@@ -59,16 +25,13 @@ const THEMES = [
 const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 const alpha = (hex, a) => `${hex}${a}`;
 
-// Helper function to include your app password in every secure backend request
 const secureFetch = async (url, options = {}) => {
   const password = localStorage.getItem('wardrobe_password') || '';
-  
   const headers = {
     'Content-Type': 'application/json',
     'x-app-password': password,
     ...(options.headers || {})
   };
-
   const response = await fetch(url, { ...options, headers });
   return response;
 };
@@ -147,7 +110,6 @@ const PaletteIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="
 const CheckIcon = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>;
 const FilterIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>;
 const EditIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
-const UploadIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
 const SaveIcon = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>;
 const ExpandIcon = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>;
 
@@ -590,17 +552,6 @@ export default function App() {
       appleMeta.name = 'apple-mobile-web-app-capable'; appleMeta.content = 'yes';
       document.head.appendChild(appleMeta);
     }
-
-    if ('serviceWorker' in navigator) {
-      const swCode = `
-        self.addEventListener('install', (e) => { self.skipWaiting(); });
-        self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
-        self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => new Response('Offline'))); });
-      `;
-      const blob = new Blob([swCode], { type: 'application/javascript' });
-      const swUrl = URL.createObjectURL(blob);
-      navigator.serviceWorker.register(swUrl).catch(err => console.error('SW Registration failed', err));
-    }
   }, []);
 
   const [activeTab, setActiveTab] = useState('wardrobe');
@@ -625,7 +576,14 @@ export default function App() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showBodyUploadModal, setShowBodyUploadModal] = useState(false);
-  const [userBodyPhoto, setUserBodyPhoto] = useState('https://placehold.co/400x650/f4f4f4/333?text=Upload+Your+Photo+Above');
+  
+  const [userBodyPhoto, setUserBodyPhoto] = useState(() => {
+    try {
+      return localStorage.getItem('wardrobe_body_photo') || 'https://placehold.co/400x650/f4f4f4/333?text=Upload+Your+Photo+Above';
+    } catch (e) {
+      return 'https://placehold.co/400x650/f4f4f4/333?text=Upload+Your+Photo+Above';
+    }
+  });
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -665,6 +623,10 @@ export default function App() {
   const fetchSavedClothes = async () => {
     try {
       const response = await secureFetch('/api/supabase?action=getClothes');
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('API route returned non-JSON response');
+      }
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to fetch clothes');
       
@@ -677,13 +639,17 @@ export default function App() {
         });
       }
     } catch (err) {
-      console.error("Error loading clothes:", err);
+      console.warn("Error loading clothes (backend may still be syncing):", err.message);
     }
   };
 
   const fetchSavedOutfits = async () => {
     try {
       const response = await secureFetch('/api/supabase?action=getOutfits');
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('API route returned non-JSON response');
+      }
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to fetch outfits');
 
@@ -699,7 +665,7 @@ export default function App() {
         setSavedOutfits(cleanedData);
       }
     } catch (err) {
-      console.error("Error fetching outfits:", err);
+      console.warn("Error fetching outfits (backend may still be syncing):", err.message);
     }
   };
 
@@ -905,7 +871,6 @@ export default function App() {
       setUploadStatus('Generating AI tags via secure server...');
       const base64Img = await resizeImageForAI(noBgBlob, 512);
       
-      // Call secure serverless Gemini API endpoint
       const geminiRes = await secureFetch('/api/gemini', {
         method: 'POST',
         body: JSON.stringify({ base64Img })
@@ -959,8 +924,11 @@ export default function App() {
       }
       
       const standardBlob = await convertToStandardImageBlob(processedFile);
-      const imgUrl = URL.createObjectURL(standardBlob);
-      setUserBodyPhoto(imgUrl);
+      const base64Data = await blobToBase64(standardBlob);
+      setUserBodyPhoto(base64Data);
+      try {
+        localStorage.setItem('wardrobe_body_photo', base64Data);
+      } catch (e) {}
     } catch (err) {
       alert("Failed to process photo.");
     } finally {
@@ -1066,7 +1034,6 @@ export default function App() {
         const garment = garmentsToProcess[i];
         setUploadStatus(`Step ${i + 1}/${garmentsToProcess.length}: Fitting ${garment.name}...`);
         
-        // Secure call to HF backend endpoint
         const response = await secureFetch('/api/hf', {
           method: 'POST',
           body: JSON.stringify({
@@ -1343,257 +1310,204 @@ export default function App() {
 
         {activeTab === 'closet' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <input 
-              type="text" 
-              placeholder="Search by name, color, weather..." 
-              value={outfitFilterText}
-              onChange={(e) => setOutfitFilterText(e.target.value)}
-              style={styles.inputField}
-            />
-            
             {renderFilterBar()}
+            <div style={{ marginBottom: '16px' }}>
+              <input 
+                type="text" 
+                placeholder="Search saved outfits..." 
+                value={outfitFilterText}
+                onChange={e => setOutfitFilterText(e.target.value)}
+                style={styles.inputField}
+              />
+            </div>
 
-            {savedOutfits.length === 0 ? (
-              <div style={{ textAlign: 'center', marginTop: '40px', opacity: 0.5 }}>
-                <p>No outfits saved yet.</p>
-                <p style={{ fontSize: '12px' }}>Build one in the Dressing Room and click 'Save'.</p>
+            {savedOutfits.filter(outfit => {
+              const matchesText = (outfit.name || '').toLowerCase().includes(outfitFilterText.toLowerCase());
+              const matchesFilter = outfitMatchesFilters(outfit);
+              return matchesText && matchesFilter;
+            }).length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', opacity: 0.6 }}>
+                <p>No saved outfits match your filters.</p>
               </div>
             ) : (
               <div style={styles.outfitGrid}>
-                {savedOutfits
-                  .filter(outfitMatchesFilters)
-                  .filter(outfit => {
-                     if (!outfitFilterText) return true;
-                     const search = outfitFilterText.toLowerCase();
-                     const metaStr = outfit.metadata ? JSON.stringify(outfit.metadata).toLowerCase() : '';
-                     return (outfit.name || '').toLowerCase().includes(search) || metaStr.includes(search);
-                  })
-                  .map(outfit => (
-                    <OutfitCard 
-                      key={outfit.id} 
-                      outfit={outfit} 
-                      allWardrobeItems={wardrobe}
-                      resetTrigger={activeTab} 
-                      theme={activeTheme}
-                      styles={styles}
-                      onEdit={setEditingOutfit}
-                      onExpand={setExpandedOutfitData}
-                    />
+                {savedOutfits.filter(outfit => {
+                  const matchesText = (outfit.name || '').toLowerCase().includes(outfitFilterText.toLowerCase());
+                  const matchesFilter = outfitMatchesFilters(outfit);
+                  return matchesText && matchesFilter;
+                }).map(outfit => (
+                  <OutfitCard 
+                    key={outfit.id} 
+                    outfit={outfit} 
+                    allWardrobeItems={wardrobe}
+                    resetTrigger={activeTab}
+                    theme={activeTheme}
+                    styles={styles}
+                    onEdit={o => setEditingOutfit(o)}
+                    onExpand={data => setExpandedOutfitData(data)}
+                  />
                 ))}
               </div>
             )}
           </div>
         )}
-
-        {expandedOutfitData && (
-          <ExpandedOutfitModal 
-            items={expandedOutfitData.items} 
-            outfitTitle={expandedOutfitData.title} 
-            theme={activeTheme} 
-            styles={styles} 
-            onClose={() => setExpandedOutfitData(null)} 
-            onLoadToDressingRoom={() => loadOutfitToDressingRoom(expandedOutfitData.items, expandedOutfitData.outfit)}
-            onDuplicateToDressingRoom={() => duplicateOutfitToDressingRoom(expandedOutfitData.items, expandedOutfitData.outfit)}
-          />
-        )}
-
-        {showConfirmModal && (
-          <div style={styles.overlay}>
-            <div style={styles.modalBox}>
-              <div style={styles.modalTopRow}>
-                <h3 style={styles.modalHeading}>Ready to try on?</h3>
-                <button onClick={() => setShowConfirmModal(false)} style={styles.modalClose}><CloseIcon /></button>
-              </div>
-              <p style={styles.modalBody}>
-                Generate an AI virtual try-on featuring your currently selected garments? This works best if you have uploaded a base photo first.
-              </p>
-              
-              {selectedOutfit.tops && selectedOutfit.coats && (
-                <div style={{ marginTop: '12px', padding: '12px', backgroundColor: alpha(activeTheme.accent, '10'), borderRadius: '8px', fontSize: '13px' }}>
-                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={excludeTopFromTryOn} 
-                      onChange={(e) => setExcludeTopFromTryOn(e.target.checked)} 
-                      style={{ marginTop: '2px', accentColor: activeTheme.accent }}
-                    />
-                    <span style={{ opacity: 0.9 }}>
-                      <strong>Exclude Shirt/Top from image generation?</strong><br/>
-                      The AI often struggles to correctly layer jumpers/coats over shirts. Excluding it can make the generated image more accurate (the top stays saved in your outfit data).
-                    </span>
-                  </label>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                <button onClick={() => setShowConfirmModal(false)} style={styles.cancelBtn}>Cancel</button>
-                <button onClick={executeVirtualTryOn} style={styles.confirmBtn}>Generate Fit</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showSaveOutfitModal && (
-          <div style={styles.overlay}>
-            <div style={styles.modalBox}>
-              <div style={styles.modalTopRow}>
-                <h3 style={styles.modalHeading}>{editingOutfitId ? 'Update Outfit' : 'Save Outfit'}</h3>
-                <button onClick={() => setShowSaveOutfitModal(false)} style={styles.modalClose}><CloseIcon /></button>
-              </div>
-              <p style={styles.modalBody}>Give this look a name. We'll automatically tag it with the selected colors and occasions.</p>
-              
-              <input 
-                type="text" 
-                placeholder="e.g. Summer Office Look" 
-                value={newOutfitName}
-                onChange={(e) => setNewOutfitName(e.target.value)}
-                style={styles.inputField}
-              />
-
-              {pendingTryOnImage && (
-                <div style={{ marginBottom: '16px', opacity: 0.8, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CheckIcon /> AI Try-On image will be saved as the leading photo of this outfit.
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                <button onClick={() => setShowSaveOutfitModal(false)} style={styles.cancelBtn}>Cancel</button>
-                <button onClick={handleSaveOutfit} style={styles.confirmBtn}>{editingOutfitId ? 'Update in Closet' : 'Save to Closet'}</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {(isGenerating || isUploading) && (
-          <div style={styles.overlay}>
-            <div style={styles.modalBox}>
-              <h3 style={styles.modalHeading}>{isUploading ? 'Saving...' : 'Creating your fit...'}</h3>
-              <p style={styles.modalBody}>{uploadStatus || 'Processing with AI engine...'}</p>
-              <div style={{ margin: '20px auto', width: '40px', height: '40px', border: `3px solid ${activeTheme.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-            </div>
-          </div>
-        )}
-
-        {tryOnResult && (
-          <div style={styles.overlay}>
-            <div style={styles.modalBox}>
-              <div style={styles.modalTopRow}>
-                <h3 style={styles.modalHeading}>Virtual Try-On Complete</h3>
-                <button onClick={() => setTryOnResult(null)} style={styles.modalClose}><CloseIcon /></button>
-              </div>
-              <p style={styles.modalBody}>{tryOnResult.summary}</p>
-              {tryOnResult.steps && tryOnResult.steps.length > 0 && (
-                 <div style={{ marginTop: '10px', textAlign: 'center' }}>
-                   <img 
-                     src={tryOnResult.steps[tryOnResult.steps.length - 1].resultPhoto} 
-                     alt="Final Try-On Result" 
-                     style={{ maxWidth: '100%', borderRadius: '8px' }} 
-                   />
-                 </div>
-              )}
-              <div style={{ display: 'flex', marginTop: '16px', gap: '10px' }}>
-                <button onClick={() => setTryOnResult(null)} style={styles.cancelBtn}>Close</button>
-                <button 
-                  onClick={() => { 
-                    setPendingTryOnImage(tryOnResult.steps[tryOnResult.steps.length - 1].resultPhoto); 
-                    setTryOnResult(null); 
-                    setShowSaveOutfitModal(true); 
-                  }} 
-                  style={styles.confirmBtn}
-                >
-                  Save Look to Closet
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showUploadModal && (
-          <div style={styles.overlay}>
-            <div style={styles.modalBox}>
-              <div style={styles.modalTopRow}>
-                <h3 style={styles.modalHeading}>Add to Wardrobe</h3>
-                <button onClick={() => setShowUploadModal(false)} style={styles.modalClose}><CloseIcon /></button>
-              </div>
-              <p style={styles.modalBody}>Upload a garment photo. AI will automatically remove the background and tag the metadata.</p>
-              
-              <label style={styles.uploadArea}>
-                <UploadIcon />
-                <span>Tap to Select Image</span>
-                <input type="file" accept="image/*,.heic" onChange={handleFileUpload} style={{ display: 'none' }} />
-              </label>
-
-              <div style={{ display: 'flex', marginTop: '16px' }}>
-                <button onClick={() => setShowUploadModal(false)} style={styles.cancelBtn}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showBodyUploadModal && (
-          <div style={styles.overlay}>
-            <div style={styles.modalBox}>
-              <div style={styles.modalTopRow}>
-                <h3 style={styles.modalHeading}>Update Base Photo</h3>
-                <button onClick={() => setShowBodyUploadModal(false)} style={styles.modalClose}><CloseIcon /></button>
-              </div>
-              <p style={styles.modalBody}>Upload a front-facing photo of yourself to serve as the base mannequin for the AI try-on.</p>
-              
-              <div style={{ marginBottom: '16px', textAlign: 'center' }}>
-                <img src={userBodyPhoto} alt="Current Mannequin" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', objectFit: 'contain' }} />
-              </div>
-
-              <label style={styles.uploadArea}>
-                <UploadIcon />
-                <span>Upload New Base Photo</span>
-                <input type="file" accept="image/*,.heic" onChange={handleBodyPhotoUpload} style={{ display: 'none' }} />
-              </label>
-
-              <div style={{ display: 'flex', marginTop: '16px' }}>
-                <button onClick={() => setShowBodyUploadModal(false)} style={styles.cancelBtn}>Close</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showFilterModal && (
-          <div style={styles.overlay}>
-            <div style={styles.modalBox}>
-              <div style={styles.modalTopRow}>
-                <h3 style={styles.modalHeading}>Filter Search</h3>
-                <button onClick={() => setShowFilterModal(false)} style={styles.modalClose}><CloseIcon /></button>
-              </div>
-
-              <div style={{ maxHeight: '60vh', overflowY: 'auto' }} className="hide-scrollbar">
-                {Object.entries(FILTER_OPTIONS).map(([category, options]) => (
-                  <div key={category} style={{ marginBottom: '18px' }}>
-                    <p style={styles.paletteTitle}>{capitalize(category)} (Multi-Select)</p>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      {options.map(opt => {
-                        const isSelected = activeFilters[category]?.includes(opt);
-                        return (
-                          <button key={opt} onClick={() => toggleFilterChip(category, opt)} style={styles.filterChip(isSelected)}>
-                            {capitalize(opt)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                <button onClick={clearAllFilters} style={styles.cancelBtn}>Clear</button>
-                <button onClick={() => setShowFilterModal(false)} style={styles.confirmBtn}>Apply</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {editingItem && <MetadataEditorModal item={editingItem} theme={activeTheme} styles={styles} onSave={saveUpdatedItemMetadata} onClose={() => setEditingItem(null)} onDelete={deleteUpdatedItem} />}
-        {editingOutfit && <OutfitMetadataEditorModal outfit={editingOutfit} theme={activeTheme} styles={styles} onSave={saveUpdatedOutfitMetadata} onClose={() => setEditingOutfit(null)} onDelete={deleteSavedOutfit} />}
-        
       </div>
+
+      {showUploadModal && (
+        <div style={styles.overlay}>
+          <div style={styles.modalBox}>
+            <div style={styles.modalTopRow}>
+              <h3 style={styles.modalHeading}>Add Clothing Item</h3>
+              <button onClick={() => setShowUploadModal(false)} style={styles.modalClose}><CloseIcon /></button>
+            </div>
+            <p style={styles.modalBody}>Upload a photo of your clothing item. AI will automatically remove the background and tag it!</p>
+            <label style={styles.uploadArea}>
+              <UploadIcon />
+              <span>Choose Photo or Take Picture</span>
+              <input type="file" accept="image/*,.heic" onChange={handleFileUpload} style={{ display: 'none' }} />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {showBodyUploadModal && (
+        <div style={styles.overlay}>
+          <div style={styles.modalBox}>
+            <div style={styles.modalTopRow}>
+              <h3 style={styles.modalHeading}>Upload Your Full-Body Photo</h3>
+              <button onClick={() => setShowBodyUploadModal(false)} style={styles.modalClose}><CloseIcon /></button>
+            </div>
+            <p style={styles.modalBody}>Upload a clear full-body photo of yourself to use for AI Virtual Try-On.</p>
+            <label style={styles.uploadArea}>
+              <UploadIcon />
+              <span>Choose Body Photo</span>
+              <input type="file" accept="image/*,.heic" onChange={handleBodyPhotoUpload} style={{ display: 'none' }} />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {showFilterModal && (
+        <div style={styles.overlay}>
+          <div style={{...styles.modalBox, display: 'flex', flexDirection: 'column'}}>
+            <div style={styles.modalTopRow}>
+              <h3 style={styles.modalHeading}>Filter Wardrobe</h3>
+              <button onClick={() => setShowFilterModal(false)} style={styles.modalClose}><CloseIcon /></button>
+            </div>
+            
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '4px' }} className="hide-scrollbar">
+              {Object.entries(FILTER_OPTIONS).map(([category, options]) => (
+                <div key={category} style={{ marginBottom: '16px' }}>
+                  <p style={styles.paletteTitle}>{capitalize(category)}</p>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {options.map(opt => (
+                      <button key={opt} onClick={() => toggleFilterChip(category, opt)} style={styles.filterChip(activeFilters[category]?.includes(opt))}>
+                        {capitalize(opt)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+              <button onClick={clearAllFilters} style={styles.cancelBtn}>Clear All</button>
+              <button onClick={() => setShowFilterModal(false)} style={styles.confirmBtn}>Apply Filters</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSaveOutfitModal && (
+        <div style={styles.overlay}>
+          <div style={styles.modalBox}>
+            <div style={styles.modalTopRow}>
+              <h3 style={styles.modalHeading}>{editingOutfitId ? 'Update Saved Outfit' : 'Save Outfit'}</h3>
+              <button onClick={() => setShowSaveOutfitModal(false)} style={styles.modalClose}><CloseIcon /></button>
+            </div>
+            <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', opacity: 0.8 }}>Outfit Name</label>
+            <input 
+              style={styles.inputField} 
+              value={newOutfitName} 
+              onChange={e => setNewOutfitName(e.target.value)} 
+              placeholder="e.g. Casual Friday Look" 
+            />
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button onClick={() => setShowSaveOutfitModal(false)} style={styles.cancelBtn}>Cancel</button>
+              <button onClick={handleSaveOutfit} style={styles.confirmBtn}>Save to Closet</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showConfirmModal && (
+        <div style={styles.overlay}>
+          <div style={styles.modalBox}>
+            <div style={styles.modalTopRow}>
+              <h3 style={styles.modalHeading}>AI Virtual Try-On</h3>
+              <button onClick={() => setShowConfirmModal(false)} style={styles.modalClose}><CloseIcon /></button>
+            </div>
+            <p style={styles.modalBody}>Generate a realistic AI try-on image of this outfit on your body photo?</p>
+            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input 
+                type="checkbox" 
+                id="excludeTop" 
+                checked={excludeTopFromTryOn} 
+                onChange={e => setExcludeTopFromTryOn(e.target.checked)} 
+              />
+              <label htmlFor="excludeTop" style={{ fontSize: '13px', cursor: 'pointer' }}>Layer coat over top (skip top garment try-on step)</label>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setShowConfirmModal(false)} style={styles.cancelBtn}>Cancel</button>
+              <button onClick={executeVirtualTryOn} style={styles.confirmBtn}>Generate Try-On</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isGenerating && (
+        <div style={styles.overlay}>
+          <div style={{ ...styles.modalBox, textAlign: 'center', padding: '40px 20px' }}>
+            <div style={{ width: '40px', height: '40px', border: `4px solid ${activeTheme.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 20px' }} />
+            <h3 style={{ margin: '0 0 8px' }}>Creating Your Look...</h3>
+            <p style={{ margin: 0, fontSize: '13px', opacity: 0.8 }}>{uploadStatus || 'Fitting garments onto your photo...'}</p>
+          </div>
+        </div>
+      )}
+
+      {editingItem && (
+        <MetadataEditorModal 
+          item={editingItem} 
+          theme={activeTheme} 
+          styles={styles} 
+          onClose={() => setEditingItem(null)} 
+          onSave={saveUpdatedItemMetadata}
+          onDelete={deleteUpdatedItem}
+        />
+      )}
+
+      {editingOutfit && (
+        <OutfitMetadataEditorModal 
+          outfit={editingOutfit} 
+          theme={activeTheme} 
+          styles={styles} 
+          onClose={() => setEditingOutfit(null)} 
+          onSave={saveUpdatedOutfitMetadata}
+          onDelete={deleteSavedOutfit}
+        />
+      )}
+
+      {expandedOutfitData && (
+        <ExpandedOutfitModal 
+          items={expandedOutfitData.items} 
+          outfitTitle={expandedOutfitData.title}
+          theme={activeTheme}
+          styles={styles}
+          onClose={() => setExpandedOutfitData(null)}
+          onLoadToDressingRoom={() => loadOutfitToDressingRoom(expandedOutfitData.items, expandedOutfitData.outfit)}
+          onDuplicateToDressingRoom={() => duplicateOutfitToDressingRoom(expandedOutfitData.items, expandedOutfitData.outfit)}
+        />
+      )}
     </div>
   );
 }

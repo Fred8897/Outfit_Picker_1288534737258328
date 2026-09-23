@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
   const ai = new GoogleGenAI({ apiKey });
   const modelsToTry = [
-    "gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"
+    "gemini-2.5-flash", "gemini-3.7-flash", "gemini-3.1-pro-preview"
   ];
 
   let lastError = null;
