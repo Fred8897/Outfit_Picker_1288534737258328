@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from '@google/genai';
-import { supabase } from './supabaseClient';
 import heic2any from 'heic2any';
 import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal';
-import { Client, handle_file } from "@gradio/client";
-
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
 
 const FILTER_OPTIONS = {
   temperature: ['hot', 'medium', 'cold'],
@@ -63,6 +58,20 @@ const THEMES = [
 
 const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 const alpha = (hex, a) => `${hex}${a}`;
+
+// Helper function to include your app password in every secure backend request
+const secureFetch = async (url, options = {}) => {
+  const password = localStorage.getItem('wardrobe_password') || '';
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-app-password': password,
+    ...(options.headers || {})
+  };
+
+  const response = await fetch(url, { ...options, headers });
+  return response;
+};
 
 const normalizeItem = (item) => {
   return {
@@ -122,12 +131,13 @@ const resizeImageForAI = (fileBlob, maxDimension = 1024) => {
   });
 };
 
-const prepareFileForGradio = async (source) => {
-  if (typeof source === 'string' && source.startsWith('blob:')) {
-    const response = await fetch(source);
-    return await response.blob();
-  }
-  return source;
+const blobToBase64 = (blob) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 };
 
 const CameraIcon = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1-1.6a1.5 1.5 0 0 1 1.28-.7h4.04a1.5 1.5 0 0 1 1.28.7l1 1.6h2.2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5Z"/><circle cx="12" cy="13" r="3.2"/></svg>;
@@ -281,7 +291,7 @@ const OutfitCard = ({ outfit, allWardrobeItems, resetTrigger, theme, styles, onE
     .filter(Boolean);
 
   if (outfit.image_url) {
-    orderedItems.unshift({ // Added AI image securely to the front of the carousel
+    orderedItems.unshift({
       id: 'tryon', name: 'AI Virtual Try-On', image: outfit.image_url, layer: 'try-on'
     });
   }
@@ -324,11 +334,11 @@ const OutfitCard = ({ outfit, allWardrobeItems, resetTrigger, theme, styles, onE
       const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
       const dx = touchStartPos.current.x - clientX;
       
-      if (dx > 40 && totalItems > 1) { // Swipe Left -> Next
+      if (dx > 40 && totalItems > 1) {
         setViewState(prev => (prev + 1) % totalItems);
-      } else if (dx < -40 && totalItems > 1) { // Swipe Right -> Prev
+      } else if (dx < -40 && totalItems > 1) {
         setViewState(prev => (prev - 1 + totalItems) % totalItems);
-      } else if (Math.abs(dx) < 10) { // Short tap (Advances to replicate click-swipe flow)
+      } else if (Math.abs(dx) < 10) {
         if (totalItems > 1) {
           setViewState(prev => (prev + 1) % totalItems);
         }
@@ -643,7 +653,10 @@ export default function App() {
     const APP_PASSWORD = import.meta.env.VITE_APP_PASSWORD || 'izzy123';
     if (passwordInput === APP_PASSWORD) {
       setIsAuthenticated(true);
-      try { localStorage.setItem('wardrobe_auth', 'true'); } catch (err) {}
+      try { 
+        localStorage.setItem('wardrobe_auth', 'true'); 
+        localStorage.setItem('wardrobe_password', passwordInput);
+      } catch (err) {}
     } else {
       alert('Incorrect password');
     }
@@ -651,10 +664,12 @@ export default function App() {
 
   const fetchSavedClothes = async () => {
     try {
-      const { data, error } = await supabase.from('clothes_test').select('*');
-      if (error) throw error;
-      if (data && data.length > 0) {
-        const normalizedData = data.map(normalizeItem);
+      const response = await secureFetch('/api/supabase?action=getClothes');
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch clothes');
+      
+      if (result.data && result.data.length > 0) {
+        const normalizedData = result.data.map(normalizeItem);
         setWardrobe(prev => {
           const existingIds = new Set(normalizedData.map(i => i.id));
           const keptInitial = INITIAL_WARDROBE.map(normalizeItem).filter(i => !existingIds.has(i.id));
@@ -662,16 +677,18 @@ export default function App() {
         });
       }
     } catch (err) {
-      console.error("Error loading clothes_test:", err);
+      console.error("Error loading clothes:", err);
     }
   };
 
   const fetchSavedOutfits = async () => {
     try {
-      const { data, error } = await supabase.from('outfits_test').select('*');
-      if (error) throw error;
-      if (data) {
-        const cleanedData = data.map(outfit => {
+      const response = await secureFetch('/api/supabase?action=getOutfits');
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch outfits');
+
+      if (result.data) {
+        const cleanedData = result.data.map(outfit => {
           let itemIds = outfit.item_ids;
           if (typeof itemIds === 'string') {
             try { itemIds = JSON.parse(itemIds); } catch (e) { itemIds = []; }
@@ -699,51 +716,54 @@ export default function App() {
 
     try {
       setIsUploading(true);
-      let imageUrl = null;
+      let tryOnBase64 = null;
       
       if (pendingTryOnImage) {
-        setUploadStatus('Saving AI image to cloud...');
-        const response = await fetch(pendingTryOnImage);
-        const blob = await response.blob();
-        const fileName = `tryon_${Date.now()}.jpg`;
-        const { error: uploadErr } = await supabase.storage.from('wardrobe_test').upload(fileName, blob);
-        if (uploadErr) throw uploadErr;
-        const { data: publicUrlData } = supabase.storage.from('wardrobe_test').getPublicUrl(fileName);
-        imageUrl = publicUrlData.publicUrl;
+        setUploadStatus('Saving AI image to secure cloud...');
+        const res = await fetch(pendingTryOnImage);
+        const blob = await res.blob();
+        tryOnBase64 = await blobToBase64(blob);
       }
 
       if (editingOutfitId) {
         setUploadStatus('Updating outfit in Closet...');
-        const updatedOutfitData = {
-          name: newOutfitName || "My Custom Outfit",
-          item_ids: selectedItems.map(i => i.id),
-          metadata: aggregatedMetadata
-        };
-        if (imageUrl) {
-          updatedOutfitData.image_url = imageUrl;
-        }
+        const response = await secureFetch('/api/supabase', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'updateOutfit',
+            id: editingOutfitId,
+            name: newOutfitName || "My Custom Outfit",
+            item_ids: selectedItems.map(i => i.id),
+            metadata: aggregatedMetadata,
+            imageFile: tryOnBase64
+          })
+        });
 
-        const { error } = await supabase.from('outfits_test').update(updatedOutfitData).eq('id', editingOutfitId);
-        if (error) throw error;
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Failed to update outfit');
 
-        setSavedOutfits(prev => prev.map(o => o.id === editingOutfitId ? { ...o, ...updatedOutfitData } : o));
+        setSavedOutfits(prev => prev.map(o => o.id === editingOutfitId ? { ...o, ...result.data } : o));
         setEditingOutfitId(null);
       } else {
         setUploadStatus('Saving to Closet...');
-        const newOutfit = {
-          id: `outfit_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-          name: newOutfitName || "My Custom Outfit",
-          item_ids: selectedItems.map(i => i.id),
-          metadata: aggregatedMetadata
-        };
-        if (imageUrl) {
-          newOutfit.image_url = imageUrl;
-        }
-
-        const { error } = await supabase.from('outfits_test').insert([newOutfit]);
-        if (error) throw error;
+        const newOutfitId = `outfit_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         
-        setSavedOutfits(prev => [...prev, newOutfit]);
+        const response = await secureFetch('/api/supabase', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'saveOutfit',
+            id: newOutfitId,
+            name: newOutfitName || "My Custom Outfit",
+            item_ids: selectedItems.map(i => i.id),
+            metadata: aggregatedMetadata,
+            imageFile: tryOnBase64
+          })
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Failed to save outfit');
+        
+        setSavedOutfits(prev => [...prev, result.data]);
       }
 
       setShowSaveOutfitModal(false);
@@ -867,7 +887,7 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setShowUploadModal(false); // Instantly close modal 
+    setShowUploadModal(false); 
     setIsUploading(true);
     setUploadStatus('Processing item image...');
     
@@ -882,58 +902,37 @@ export default function App() {
       setUploadStatus('Removing background magically...');
       const noBgBlob = await imglyRemoveBackground(processedFile);
       
-      setUploadStatus('Generating AI tags...');
+      setUploadStatus('Generating AI tags via secure server...');
       const base64Img = await resizeImageForAI(noBgBlob, 512);
       
-      const aiModelsToTry = [
-        "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"
-      ];
+      // Call secure serverless Gemini API endpoint
+      const geminiRes = await secureFetch('/api/gemini', {
+        method: 'POST',
+        body: JSON.stringify({ base64Img })
+      });
 
-      let metadata = null;
-      let lastAiError = null;
+      const metadata = await geminiRes.json();
+      if (!geminiRes.ok) throw new Error(metadata.error || 'AI tagging failed.');
 
-      for (const modelName of aiModelsToTry) {
-        try {
-          const response = await ai.models.generateContent({
-              model: modelName,
-              contents: [{
-                  role: 'user',
-                  parts: [
-                      { inlineData: { data: base64Img, mimeType: 'image/jpeg' } },
-                      { text: 'Analyze this clothing item. Return ONLY a JSON object with this exact structure (no markdown): { "layer": "coats"|"tops"|"bottoms"|"shoes"|"bags", "name": "A short descriptive name", "colors": ["primary color"], "occasion": ["casual"|"work"|"party"], "temperature": ["hot"|"medium"|"cold"], "weather": ["sun"|"rain"|"cloudy"], "hiddenTags": ["fabric or style descriptor"] }' }
-                  ]
-              }]
-          });
-          
-          const rawText = typeof response.text === 'function' ? response.text() : response.text;
-          const jsonText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-          
-          metadata = JSON.parse(jsonText);
-          break; 
-        } catch (error) {
-          lastAiError = error;
-        }
-      }
-
-      if (!metadata) throw new Error(`AI tagging failed. Last error: ${lastAiError?.message}`);
-      
       setUploadStatus('Uploading to secure cloud...');
+      const imageBase64 = await blobToBase64(noBgBlob);
+      const itemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-      const { data: uploadData, error: uploadErr } = await supabase.storage.from('wardrobe_test').upload(fileName, noBgBlob);
-      if (uploadErr) throw uploadErr;
-      
-      const { data: publicUrlData } = supabase.storage.from('wardrobe_test').getPublicUrl(fileName);
-      
-      const newItem = {
-        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        ...metadata,
-        image: publicUrlData.publicUrl
-      };
-      
-      const { data: insertData, error: insertErr } = await supabase.from('clothes_test').insert([newItem]).select();
-      if (insertErr) throw insertErr;
-      
-      const normalizedItem = normalizeItem(insertData?.[0] || newItem);
+
+      const supabaseRes = await secureFetch('/api/supabase', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'uploadClothing',
+          item: { id: itemId, ...metadata },
+          fileName,
+          imageFile: imageBase64
+        })
+      });
+
+      const supabaseResult = await supabaseRes.json();
+      if (!supabaseRes.ok) throw new Error(supabaseResult.error || 'Storage upload failed.');
+
+      const normalizedItem = normalizeItem(supabaseResult.data);
       setWardrobe(prev => [...prev, normalizedItem]);
       setSelectedOutfit(prev => ({ ...prev, [normalizedItem.layer]: normalizedItem }));
       
@@ -949,7 +948,7 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    setShowBodyUploadModal(false); // Instantly close modal
+    setShowBodyUploadModal(false); 
     setIsUploading(true);
     setUploadStatus('Processing body photo...');
     try {
@@ -979,7 +978,10 @@ export default function App() {
     }
 
     try {
-      await supabase.from('clothes_test').upsert(normalized);
+      await secureFetch('/api/supabase', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'updateCloth', item: normalized })
+      });
     } catch (err) {
       console.warn("Supabase update skipped/failed:", err);
     }
@@ -993,7 +995,10 @@ export default function App() {
     }
 
     try {
-      await supabase.from('clothes_test').delete().eq('id', itemToDelete.id);
+      await secureFetch('/api/supabase', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteCloth', id: itemToDelete.id })
+      });
     } catch (err) {
       console.warn("Supabase delete failed:", err);
     }
@@ -1004,10 +1009,15 @@ export default function App() {
     setSavedOutfits(prev => prev.map(o => o.id === updatedOutfit.id ? updatedOutfit : o));
     
     try {
-      await supabase.from('outfits_test').update({
-        name: updatedOutfit.name,
-        metadata: updatedOutfit.metadata
-      }).eq('id', updatedOutfit.id);
+      await secureFetch('/api/supabase', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          action: 'updateOutfitMetadata', 
+          id: updatedOutfit.id,
+          name: updatedOutfit.name,
+          metadata: updatedOutfit.metadata
+        })
+      });
     } catch (err) {
       console.warn("Supabase outfit update failed:", err);
     }
@@ -1017,7 +1027,10 @@ export default function App() {
   const deleteSavedOutfit = async (outfitToDelete) => {
     setSavedOutfits(prev => prev.filter(o => o.id !== outfitToDelete.id));
     try {
-      await supabase.from('outfits_test').delete().eq('id', outfitToDelete.id);
+      await secureFetch('/api/supabase', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteOutfit', id: outfitToDelete.id })
+      });
     } catch (err) {
       console.warn("Supabase outfit delete failed:", err);
     }
@@ -1032,7 +1045,6 @@ export default function App() {
       const activeGarments = Object.entries(selectedOutfit)
         .filter(([layer, item]) => {
           if (item === null) return false;
-          // Apply layer exclusion logic if requested (don't send tops to try-on if conflict box is ticked)
           if (layer === 'tops' && selectedOutfit.coats && excludeTopFromTryOn) return false;
           return true;
         })
@@ -1054,20 +1066,19 @@ export default function App() {
         const garment = garmentsToProcess[i];
         setUploadStatus(`Step ${i + 1}/${garmentsToProcess.length}: Fitting ${garment.name}...`);
         
-        try {
-          const app = await Client.connect("weshopai/weshopai-virtual-try-on", { token: import.meta.env.VITE_HF_TOKEN });
-          const personInput = await prepareFileForGradio(currentPhoto);
-          const garmentInput = await prepareFileForGradio(garment.imageUrl);
-          const result = await app.predict("/generate_image", [handle_file(garmentInput), handle_file(personInput)]);
-          currentPhoto = result.data[0]?.url || result.data[0];
-        } catch (e) {
-          const fallbackApp = await Client.connect("miragic-ai/miragic-virtual-try-on", { token: import.meta.env.VITE_HF_TOKEN });
-          const personInput = await prepareFileForGradio(currentPhoto);
-          const garmentInput = await prepareFileForGradio(garment.imageUrl);
-          const result = await fallbackApp.predict("/virtual_tryon", [handle_file(personInput), handle_file(garmentInput)]);
-          currentPhoto = result.data[0]?.url || result.data[0];
-        }
+        // Secure call to HF backend endpoint
+        const response = await secureFetch('/api/hf', {
+          method: 'POST',
+          body: JSON.stringify({
+            personImage: currentPhoto,
+            garmentImage: garment.imageUrl
+          })
+        });
 
+        const resultData = await response.json();
+        if (!response.ok) throw new Error(resultData.error || `Virtual try-on failed for ${garment.name}`);
+
+        currentPhoto = resultData.resultUrl;
         stepHistory.push({ stepNumber: i + 1, garmentName: garment.name, resultPhoto: currentPhoto });
       }
 
