@@ -191,7 +191,7 @@ const areColorsCompatible = (c1Arr, c2Arr) => {
 const getThemeStyles = (theme) => ({
   appContainer: { backgroundColor: theme.bg, color: theme.text, minHeight: '100vh', padding: '20px', display: 'flex', flexDirection: 'column' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' },
-  wordmark: { margin: 0, fontFamily: 'Fraunces, serif', letterSpacing: '0.02em', color: theme.text, fontSize: 'clamp(18px, 12vw, 28px)', lineHeight: 1.2 },
+  wordmark: { margin: 0, fontFamily: 'Fraunces, serif', letterSpacing: '0.02em', color: theme.text, fontSize: 'clamp(18px, 20vw, 28px)', lineHeight: 1.2 },
   headerRight: { display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 },
   iconBtn: { background: 'none', border: 'none', color: theme.text, cursor: 'pointer' },
   addBtn: { backgroundColor: theme.accent, color: theme.bg, border: 'none', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer' },
